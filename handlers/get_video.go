@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/serefakkus/shot_app_video_logo_service/configs"
+	"github.com/serefakkus/shot_app_video_logo_service/models"
 	"net/http"
 	"path/filepath"
-	"shoot_app_video_logo_service/configs"
-	"shoot_app_video_logo_service/models"
 )
 
 func HandleGetVideo(c *gin.Context) {
@@ -14,7 +14,7 @@ func HandleGetVideo(c *gin.Context) {
 
 	request := &models.Request{}
 
-	if err := request.GetFromJson(c); err != nil {
+	if err := request.GetForm(c); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

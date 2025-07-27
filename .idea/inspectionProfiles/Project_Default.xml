@@ -1,0 +1,11 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="GoDfaErrorMayBeNotNil" enabled="true" level="WARNING" enabled_by_default="true">
+      <methods>
+        <method importPath="shoot_app_video_logo_service/models" receiver="*Request" name="GetForm" />
+        <method importPath="github.com/serefakkus/shot_app_video_logo_service/models" receiver="*Request" name="GetForm" />
+      </methods>
+    </inspection_tool>
+  </profile>
+</component>

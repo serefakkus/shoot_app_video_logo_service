@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/serefakkus/shot_app_video_logo_service/configs"
+	"github.com/serefakkus/shot_app_video_logo_service/models"
 	"net/http"
 	"path/filepath"
-	"shoot_app_video_logo_service/configs"
-	"shoot_app_video_logo_service/models"
 	"sync"
 )
 
@@ -15,15 +15,10 @@ var (
 )
 
 func HandleVideoUpload(c *gin.Context) {
-	// responsedan gelen video dosyasını al
-	file, err := c.FormFile("video")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Video file not provided"})
-		return
-	}
-
 	request := &models.Request{}
-	if err := request.GetFromJson(c); err != nil {
+	// responsedan gelen video dosyasını al
+	file, err := request.GetVideoForm(c)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

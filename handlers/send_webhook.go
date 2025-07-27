@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/serefakkus/shot_app_video_logo_service/configs"
 	"io"
 	"net/http"
-	"shoot_app_video_logo_service/configs"
 )
 
 func sendWebhook(videoID string) error {

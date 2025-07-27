@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"mime/multipart"
 	"path/filepath"
 )
 
@@ -10,11 +11,21 @@ type Request struct {
 	VideoID string `json:"video_id"`
 }
 
-func (r *Request) GetFromJson(c *gin.Context) error {
-	err := c.ShouldBindJSON(r)
+func (r *Request) GetVideoForm(c *gin.Context) (file *multipart.FileHeader, err error) {
+	file, err = c.FormFile("video")
 	if err != nil {
-		return errors.New("invalid request data")
+		err = errors.New("file not provided")
+		return
 	}
+
+	r.VideoID, _ = c.GetPostForm("video_id")
+
+	return file, r.validate()
+}
+
+func (r *Request) GetForm(c *gin.Context) (err error) {
+	r.VideoID, _ = c.GetPostForm("video_id")
+
 	return r.validate()
 }
 

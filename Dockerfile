@@ -1,33 +1,40 @@
-# Go'nun Alpine tabanlı (küçük boyutlu) versiyonunu kullanarak derleme aşamasını başlat
-FROM golang:1.24-alpine AS builder
+# Go'nun resmi imajı Debian temelli
+FROM golang:1.24-bookworm AS builder
 
-# Uygulama için çalışma dizini oluştur
+# Uygulama için bir çalışma dizini oluştur
 WORKDIR /app
 
 COPY go.mod go.sum ./
+
 RUN go mod download
 
-# Tüm proje dosyalarını kopyala
+#FFmpeg'i kur
+RUN apt-get update && apt-get install -y ffmpeg
+
 COPY . .
 
-# Uygulamayı derle. CGO_ENABLED=0 statik bir binary oluşturur.
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /main .
+# CGO_ENABLED=0 statik bir binary oluşturur.
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /server .
 
+# Çok daha küçük ve minimal bir imaj. Bu, güvenlik ve boyut için önemlidir.
+FROM debian:bookworm-slim
 
-FROM alpine:latest
+# Güvenlik güncelleştirmelerini yap ve SADECE FFmpeg'i kur.
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Derleme aşamasından sadece çalıştırılabilir dosyayı kopyala
-COPY --from=builder /main /main
+# Çalışma dizinini ayarla
+WORKDIR /app
 
-# Logo dosyasını kopyala.
-COPY logo.png /logo.png
+COPY --from=builder /server /app/server
 
-# Çıktı ve geçici dosyalar için klasörleri oluştur
-RUN mkdir -p /output /temp
+COPY logo.png /app/logo.png
 
 # *** ORTAM DEĞİŞKENİNİ (ENVIRONMENT VARIABLE) AYARLA
-ENV WEBHOOK_URL="https://example.com/webhook"
+ENV WEBHOOK_URL="localhost/weebhook"
 
-EXPOSE 80
+# Uygulamanın video dosyalarını yazacağı klasörler
+RUN mkdir -p /app/temp /app/output
 
-CMD ["/main"]
+EXPOSE 8080
+
+CMD ["/app/server"]

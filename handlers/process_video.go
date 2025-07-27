@@ -2,27 +2,38 @@ package handlers
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"shoot_app_video_logo_service/configs"
 )
 
 func processVideoAndNotify(videoID, originalFile, outputFile string) {
-	log.Printf("[%s] Starting video processing...", videoID)
+	//sol ust kısımda sabit logo
+	//filter := "[1:v]scale=150:-1[logo];color=c=white@0.7:s=170x95[bg];[0:v][bg]overlay=50:50:shortest=1[tmp];[tmp][logo]overlay=60:60"
 
-	// Opaklığı %50 olarak ayarlanmış logo için FFmpeg komutu
-	opacity := "0.5" // Bu değeri dinamik olarak da ayarlayabilirsiniz.
+	// her 5 saniyede bir logoyu farklı bir konumda göstermek için FFmpeg filtresi. (sol ust, sag alt, sol alt. ***sag üstte tarih kısımı oladuğu için eklenmedi)
+	filter := "[1:v]scale=150:-1[logo];color=c=white@0.7:s=170x95[bg];[bg][logo]overlay=(W-w)/2:(H-h)/2[watermark];[0:v][watermark]overlay=x='if(between(mod(t,15),5,10),W-w-50,50)':y='if(lt(mod(t,15),5),50,H-h-50)':shortest=1"
 
-	// her 5 saniyede bir logoyu farklı bir konumda göstermek için FFmpeg filter'ı
-	filter := fmt.Sprintf("[1:v]colorchannelmixer=aa=%s[logo_transparent];[0:v][logo_transparent]overlay=x='if(or(between(mod(t,20),0,5),between(mod(t,20),15,20)),10,W-w-10)':y='if(or(between(mod(t,20),0,5),between(mod(t,20),10,15)),10,H-h-10)'", opacity)
+	//yüksek kaliteli çıktı. Optimize edilmemiş
+	//cmd := exec.Command("ffmpeg",
+	//	"-i", originalFile,
+	//	"-i", configs.LogoPath,
+	//	"-filter_complex", filter,
+	//	"-codec:a", "copy",
+	//	outputFile,
+	//)
+
+	// Optimize edilmiş komut.
+	//kalite ayari icin -crf = guncelle (daha buyuk sayi daha az kalite , en fazla 51 -en fazla sıkıştırma- ,en az 0 -kayipsiz- olarak ayarlanir. video streaming servisleri icin 28 ideal degerdir.)
 
 	cmd := exec.Command("ffmpeg",
 		"-i", originalFile,
-		"-i", configs.LogoPath, // Logo dosyasının yolu
+		"-i", "logo.png",
 		"-filter_complex", filter,
-		"-codec:a", "copy",
+		"-c:v", "libx264",
+		"-preset", "fast",
+		"-crf", "28",
+		"-c:a", "copy",
 		outputFile,
 	)
 
@@ -42,14 +53,10 @@ func processVideoAndNotify(videoID, originalFile, outputFile string) {
 		return
 	}
 
-	log.Printf("[%s] Video processing finished. Output: %s", videoID, outputFile)
-
 	// Webhook gönder
 	err = sendWebhook(videoID)
 	if err != nil {
 		log.Printf("[%s] Failed to send webhook: %s", videoID, err.Error())
-	} else {
-		log.Printf("[%s] Webhook sent successfully.", videoID)
 	}
 
 	// Geçici dosyaları temizle

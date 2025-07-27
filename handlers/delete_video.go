@@ -2,16 +2,16 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/serefakkus/shot_app_video_logo_service/configs"
+	"github.com/serefakkus/shot_app_video_logo_service/models"
 	"os"
 	"path/filepath"
-	"shoot_app_video_logo_service/configs"
-	"shoot_app_video_logo_service/models"
 )
 
 func HandleDeleteVideo(c *gin.Context) {
 	// Extract video ID from the request
 	request := models.Request{}
-	if err := request.GetFromJson(c); err != nil {
+	if err := request.GetForm(c); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}

@@ -1,8 +1,8 @@
 package helpers
 
 import (
+	"github.com/serefakkus/shot_app_video_logo_service/configs"
 	"os"
-	"shoot_app_video_logo_service/configs"
 )
 
 // ClearTempFiles temp klasöründeki tüm geçici dosyaları siler uygulama başlatıldığında çağrılır

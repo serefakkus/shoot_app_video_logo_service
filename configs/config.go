@@ -17,8 +17,8 @@ func InitConfigs() {
 	}
 
 	//webhook_url ortam değişkenini oku
-	WebhookURL = os.Getenv("webhook_url")
+	WebhookURL = os.Getenv("WEBHOOK_URL")
 	if WebhookURL == "" {
-		panic("webhook_url is empty")
+		panic("WEBHOOK_URL is empty")
 	}
 }

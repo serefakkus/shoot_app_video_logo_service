@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"shoot_app_video_logo_service/configs"
-	"shoot_app_video_logo_service/handlers"
-	"shoot_app_video_logo_service/helpers"
+	"github.com/serefakkus/shot_app_video_logo_service/configs"
+	"github.com/serefakkus/shot_app_video_logo_service/handlers"
+	"github.com/serefakkus/shot_app_video_logo_service/helpers"
 )
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 
 	r.DELETE("/del-video", handlers.HandleDeleteVideo)
 
-	err = r.Run("0.0.0.0:80")
+	err = r.Run("0.0.0.0:8080")
 	if err != nil {
 		panic(err.Error())
 	}

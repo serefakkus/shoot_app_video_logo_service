@@ -1,25 +1,25 @@
 # Dynamic Watermark Video Processing API Documentation
 
 **Version:** 1.0
-**Last Updated:** July 25, 2025
+**Last Updated:** July 27, 2025
 
 ## Overview
 
-This service adds a dynamic logo (watermark) that moves from corner to corner every 5 seconds to video files uploaded via HTTP. To avoid blocking the server, operations are executed asynchronously (in the background). When a video process is complete, a POST request is sent to a predefined Webhook URL to notify completion. Processed videos can also be downloaded from or deleted from the server.
+This service adds a dynamic logo (watermark) that changes its position every 5 seconds to video files uploaded via HTTP. To avoid blocking the server, operations are executed asynchronously (in the background). When a video processing is complete, a POST request is sent to a predefined Webhook URL to notify of completion. Processed videos can also be downloaded from or deleted from the server.
 
 It can be run in a Docker environment using the provided `docker-compose.yml` file.
 
-Attention: Please ensure to set the `webhookURL` in the environment variables.
+**Attention:** Please ensure to set the `WEBHOOK_URL` as an environment variable.
 
 ## Base URL
 
 All API requests should be made to the following base URL:
 
-`http://localhost:80` (For local development environment)
+`http://localhost:8080` (For local development environment)
 
 ## Authentication
 
-There is no authentication method (e.g., API Key, OAuth) in the current version. The endpoints are public. For security, it is recommended to run the API in an isolated network or place it behind an API Gateway.
+There is no authentication method in the current version. The endpoints are public. For security, it is recommended to run the API in an isolated network or place it behind an API Gateway.
 
 ---
 
@@ -44,141 +44,125 @@ Uploads a video and initiates the watermarking process in the background. It ret
 
 ```bash
 curl -X POST \
-  http://localhost:80/add-logo \
+  http://localhost:8080/add-logo \
   -F "video=@/path/to/your/local_video.mp4" \
   -F "video_id=a1b2c3d4-e5f6-7890-1234-567890abcdef"
 ```
 
-Success Response (202-Accepted):
+**Success Response (202-Accepted):**
 
 Indicates that the request has been accepted and processing has started in the background.
 
-JSON
-
+```json
 {
   "status": "processing",
   "video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
 }
-Error Responses:
+```
 
-400 Bad Request (if video file is missing):
+**Error Responses:**
 
-JSON
+- **400 Bad Request:** If the video file or `video_id` is missing.
+- **500 Internal Server Error:** If there is a failure in saving the video.
 
-{ "error": "Video file not provided" }
-400 Bad Request (if video_id is missing):
+### 2. Download Processed Video
 
-JSON
-
-{ "error": "Video ID is required" }
-409 Conflict (if a process with the same video_id is already running):
-
-JSON
-
-{ "error": "Video is already being processed" }
-2. Download Processed Video
 Downloads a video that has completed processing from the server.
 
-Endpoint: POST /get-video
+- **Endpoint:** `POST /get-video`
+- **Description:** Fetches the processed video by its `video_id`.
+- **Request Type:** `multipart/form-data`
 
-Description: Fetches the processed video by its video_id.
+**Request Body:**
 
-Request Type: application/json
+| Field Name | Type   | Requirement | Description                        |
+| :--------- | :----- | :---------- | :--------------------------------- |
+| `video_id` | String | **Required** | The unique identifier of the video. |
 
-Request Body:
+**Example cURL Request:**
 
-JSON
-
-{
-  "video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
-}
-Example cURL Request:
-
-Bash
-
+```bash
 curl -X POST \
-  http://localhost:80/get-video \
-  -H "Content-Type: application/json" \
-  -d '{"video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"}' \
+  http://localhost:8080/get-video \
+  -F "video_id=a1b2c3d4-e5f6-7890-1234-567890abcdef" \
   --output processed_video.mp4
-Success Response (200-OK):
+```
 
-Content-Type: video/mp4
+**Success Response (200-OK):**
 
-Body: Raw video file data.
+- **Content-Type:** `video/mp4`
+- **Body:** Raw video file data.
 
-Error Responses:
+**Error Responses:**
 
-400 Bad Request (if video_id is missing or invalid):
+- **400 Bad Request:** If `video_id` is missing or invalid.
+- **404 Not Found:** If the video is not found or not yet processed.
 
-JSON
+### 3. Delete Processed Video
 
-{ "error": "Video ID is required" }
-404 Not Found (if the video is not found or not yet processed).
-
-3. Delete Processed Video
 Permanently deletes a processed video from the server.
 
-Endpoint: DELETE /del-video
+- **Endpoint:** `DELETE /del-video`
+- **Description:** Deletes the specified video by its `video_id`.
+- **Request Type:** `multipart/form-data`
 
-Description: Deletes the specified video and its record by video_id.
+**Request Body:**
 
-Request Type: application/json
+| Field Name | Type   | Requirement | Description                        |
+| :--------- | :----- | :---------- | :--------------------------------- |
+| `video_id` | String | **Required** | The unique identifier of the video. |
 
-Request Body:
+**Example cURL Request:**
 
-JSON
-
-{
-  "video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
-}
-Example cURL Request:
-
-Bash
-
+```bash
 curl -X DELETE \
-  http://localhost:80/del-video \
-  -H "Content-Type: application/json" \
-  -d '{"video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"}'
-Success Response (200-OK):
+  http://localhost:8080/del-video \
+  -F "video_id=a1b2c3d4-e5f6-7890-1234-567890abcdef"
+```
 
-JSON
+**Success Response (200-OK):**
 
+```json
 { "message": "Video deleted successfully" }
-Error Responses:
+```
 
-400 Bad Request (if video_id is missing or invalid).
+**Error Responses:**
 
-404 Not Found (if the video to be deleted is not found).
+- **400 Bad Request:** If `video_id` is missing or invalid.
+- **404 Not Found:** If the video to be deleted is not found.
+- **500 Internal Server Error:** If an error occurs during file deletion.
 
-500 Internal Server Error (if an error occurs during file deletion).
+### 4. Service Health Check (Ping)
 
-4. Service Health Check (Ping)
 Used to check if the service is running.
 
-Endpoint: GET /ping
+- **Endpoint:** `GET /ping`
 
-Example cURL Request:
+**Example cURL Request:**
 
-Bash
+```bash
+curl http://localhost:8080/ping
+```
 
-curl http://localhost:80/ping
-Success Response (200-OK):
+**Success Response (200-OK):**
 
 Returns a 200 status code with an empty body.
 
-Webhook Notification
-When a video processing task is successfully completed, the service sends an HTTP POST request to the webhookURL defined in handlers/video_upload.go in the following format.
+---
 
-Method: POST
+## Webhook Notification
 
-Content-Type: application/json
+When a video processing task is successfully completed, the service sends an HTTP POST request to the `WEBHOOK_URL` defined in the environment variables.
 
-Webhook Body Content:
+- **Method:** `POST`
+- **Content-Type:** `application/json`
 
-JSON
+**Webhook Body Content:**
 
+```json
 {
   "video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
 }
+```
+
 This notification indicates that the process is complete and the video is now available for download or deletion.

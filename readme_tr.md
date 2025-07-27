@@ -1,25 +1,25 @@
 # Dinamik Filigran Video İşleme API'si Dokümantasyonu
 
 **Sürüm:** 1.0
-**Son Güncelleme:** 25 Temmuz 2025
-
-Önemli Not: lütfen webhookURL'yi ortam değişkenine ekle.
+**Son Güncelleme:** 27 Temmuz 2025
 
 ## Genel Bakış
 
-Bu servis, HTTP üzerinden yüklenen video dosyalarına, her 5 saniyede bir konum değiştiren dinamik bir logo (filigran) ekler. İşlemler, sunucuyu yormamak adına asenkron olarak (arka planda) yürütülür. Bir video işleme alındığında, işlem tamamlandığında sonucun bildirileceği bir Webhook URL'ine POST isteği gönderilir. Ayrıca işlenmiş videolar sunucudan indirilebilir veya silinebilir.
+Bu servis, HTTP üzerinden yüklenen video dosyalarına her 5 saniyede bir konumunu değiştiren dinamik bir logo (filigran) ekler. Sunucuyu engellememek için işlemler asenkron olarak (arka planda) yürütülür. Bir video işleme tamamlandığında, tamamlandığını bildirmek için önceden tanımlanmış bir Webhook URL'sine bir POST isteği gönderilir. İşlenmiş videolar sunucudan indirilebilir veya silinebilir.
 
-docker-compose.yml dosyası ile Docker ortamında çalıştırılabilir.
+Sağlanan `docker-compose.yml` dosyası kullanılarak bir Docker ortamında çalıştırılabilir.
 
-## Temel URL (Base URL)
+**Dikkat:** Lütfen `WEBHOOK_URL`'yi bir ortam değişkeni olarak ayarladığınızdan emin olun.
 
-Tüm API istekleri aşağıdaki temel URL üzerinden yapılmalıdır:
+## Temel URL
 
-`http://localhost:80` (Yerel geliştirme ortamı için)
+Tüm API istekleri aşağıdaki temel URL'ye yapılmalıdır:
+
+`http://localhost:8080` (Yerel geliştirme ortamı için)
 
 ## Kimlik Doğrulama
 
-Mevcut sürümde herhangi bir kimlik doğrulama yöntemi (API Key, OAuth vb.) bulunmamaktadır. Endpoint'ler halka açıktır. Güvenlik için API'nin izole bir ağda çalıştırılması veya bir API Gateway arkasına konumlandırılması önerilir.
+Mevcut sürümde herhangi bir kimlik doğrulama yöntemi bulunmamaktadır. Endpoint'ler halka açıktır. Güvenlik için API'nin izole bir ağda çalıştırılması veya bir API Gateway arkasına yerleştirilmesi önerilir.
 
 ---
 
@@ -27,7 +27,7 @@ Mevcut sürümde herhangi bir kimlik doğrulama yöntemi (API Key, OAuth vb.) bu
 
 ### 1. Video Yükleme ve İşlemi Başlatma
 
-Bir video yükler ve filigran ekleme işlemini arka planda başlatır. İstek kabul edildiğinde anında yanıt döner.
+Bir video yükler ve filigran ekleme işlemini arka planda başlatır. İsteği kabul ettiğinde anında bir yanıt döndürür.
 
 - **Endpoint:** `POST /add-logo`
 - **Açıklama:** Yeni bir video işleme görevi oluşturur.
@@ -35,152 +35,134 @@ Bir video yükler ve filigran ekleme işlemini arka planda başlatır. İstek ka
 
 **Request Body:**
 
-| Alan Adı | Tip  | Zorunluluk | Açıklama                                                                |
-| :------- | :--- | :--------- | :---------------------------------------------------------------------- |
-| `video`  | File | **Gerekli** | Üzerinde işlem yapılacak video dosyası (mp4, mov, avi, vb.).           |
-| `video_id` | String | **Gerekli** | İşlem için oluşturulan benzersiz kimlik. |
+| Alan Adı | Tip    | Zorunluluk | Açıklama                                                    |
+| :------- | :----- | :--------- | :---------------------------------------------------------- |
+| `video`  | Dosya  | **Gerekli** | İşlenecek video dosyası (mp4, mov, avi, vb.).               |
+| `video_id` | String | **Gerekli** | İşlem için benzersiz bir tanımlayıcı.                        |
 
 **Örnek cURL İsteği:**
 
 ```bash
 curl -X POST \
-  http://localhost:80/add-logo \
+  http://localhost:8080/add-logo \
   -F "video=@/path/to/your/local_video.mp4" \
   -F "video_id=a1b2c3d4-e5f6-7890-1234-567890abcdef"
 ```
 
-Başarılı Yanıt (202-Accepted):
+**Başarılı Yanıt (202-Accepted):**
 
 İsteğin kabul edildiğini ve işlemin arka planda başladığını belirtir.
 
-JSON
-
+```json
 {
-"status": "processing",
-"video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+  "status": "processing",
+  "video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
 }
+```
 
-Hatalı Yanıtlar:
+**Hata Yanıtları:**
 
-400 Bad Request (video dosyası eksikse):
+- **400 Bad Request:** Video dosyası veya `video_id` eksikse.
+- **500 Internal Server Error:** Videoyu kaydederken bir hata oluşursa.
 
-JSON
+### 2. İşlenmiş Videoyu İndirme
 
-{ "error": "Video file not provided" }
-400 Bad Request (video_id eksikse):
+İşlemi tamamlanmış bir videoyu sunucudan indirir.
 
-JSON
+- **Endpoint:** `POST /get-video`
+- **Açıklama:** `video_id`'sine göre işlenmiş videoyu getirir.
+- **Request Tipi:** `multipart/form-data`
 
-{ "error": "Video ID is required" }
-409 Conflict (Aynı video_id ile devam eden bir işlem varsa):
+**Request Body:**
 
-JSON
+| Alan Adı | Tip    | Zorunluluk | Açıklama                        |
+| :------- | :----- | :--------- | :------------------------------ |
+| `video_id` | String | **Gerekli** | Videonun benzersiz tanımlayıcısı. |
 
-{ "error": "Video is already being processed" }
-2. İşlenmiş Videoyu İndirme
-   İşlemi tamamlanmış bir videoyu sunucudan indirir.
+**Örnek cURL İsteği:**
 
-Endpoint: POST /get-video
-
-Açıklama: video_id'ye göre işlenmiş videoyu getirir.
-
-Request Tipi: application/json
-
-Request Body:
-
-JSON
-
-{
-"video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
-}
-
-Örnek cURL İsteği:
-
-Bash
-
+```bash
 curl -X POST \
-http://localhost:80/get-video \
--H "Content-Type: application/json" \
--d '{"video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"}' \
---output processed_video.mp4
-Başarılı Yanıt (200-OK):
+  http://localhost:8080/get-video \
+  -F "video_id=a1b2c3d4-e5f6-7890-1234-567890abcdef" \
+  --output islenmis_video.mp4
+```
 
-Content-Type: video/mp4
+**Başarılı Yanıt (200-OK):**
 
-Body: Ham video dosyası verisi.
+- **Content-Type:** `video/mp4`
+- **Body:** Ham video dosyası verileri.
 
-Hatalı Yanıtlar:
+**Hata Yanıtları:**
 
-400 Bad Request (video_id eksikse veya geçersizse):
+- **400 Bad Request:** `video_id` eksik veya geçersizse.
+- **404 Not Found:** Video bulunamazsa veya henüz işlenmemişse.
 
-JSON
+### 3. İşlenmiş Videoyu Silme
 
-{ "error": "Video ID is required" }
-404 Not Found (Video bulunamazsa veya işlem henüz tamamlanmadıysa).
+İşlenmiş bir videoyu sunucudan kalıcı olarak siler.
 
-3. İşlenmiş Videoyu Silme
-   İşlemi tamamlanmış bir videoyu sunucudan kalıcı olarak siler.
+- **Endpoint:** `DELETE /del-video`
+- **Açıklama:** Belirtilen videoyu `video_id`'sine göre siler.
+- **Request Tipi:** `multipart/form-data`
 
-Endpoint: DELETE /del-video
+**Request Body:**
 
-Açıklama: video_id'ye göre ilgili videoyu ve kaydını siler.
+| Alan Adı | Tip    | Zorunluluk | Açıklama                        |
+| :------- | :----- | :--------- | :------------------------------ |
+| `video_id` | String | **Gerekli** | Videonun benzersiz tanımlayıcısı. |
 
-Request Tipi: application/json
+**Örnek cURL İsteği:**
 
-Request Body:
-
-JSON
-
-{
-"video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
-}
-Örnek cURL İsteği:
-
-Bash
-
+```bash
 curl -X DELETE \
-http://localhost:80/del-video \
--H "Content-Type: application/json" \
--d '{"video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"}'
-Başarılı Yanıt (200-OK):
+  http://localhost:8080/del-video \
+  -F "video_id=a1b2c3d4-e5f6-7890-1234-567890abcdef"
+```
 
-JSON
+**Başarılı Yanıt (200-OK):**
 
+```json
 { "message": "Video deleted successfully" }
-Hatalı Yanıtlar:
+```
 
-400 Bad Request (video_id eksikse veya geçersizse).
+**Hata Yanıtları:**
 
-404 Not Found (Silinecek video bulunamazsa).
+- **400 Bad Request:** `video_id` eksik veya geçersizse.
+- **404 Not Found:** Silinecek video bulunamazsa.
+- **500 Internal Server Error:** Dosya silme sırasında bir hata oluşursa.
 
-500 Internal Server Error (Dosya silinirken bir hata oluşursa).
+### 4. Servis Durum Kontrolü (Ping)
 
-4. Servis Durum Kontrolü (Ping)
-   Servisin ayakta olup olmadığını kontrol etmek için kullanılır.
+Servisin çalışıp çalışmadığını kontrol etmek için kullanılır.
 
-Endpoint: GET /ping
+- **Endpoint:** `GET /ping`
 
-Örnek cURL İsteği:
+**Örnek cURL İsteği:**
 
-Bash
+```bash
+curl http://localhost:8080/ping
+```
 
-curl http://localhost:80/ping
-Başarılı Yanıt (200-OK):
+**Başarılı Yanıt (200-OK):**
 
-Boş bir body ile 200 durum kodu döner.
+Boş bir gövde ile 200 durum kodu döndürür.
 
-Webhook Bildirimi
-Video işleme görevi başarıyla tamamlandığında, handlers/video_upload.go içinde tanımlı olan webhookURL adresine aşağıdaki formatta bir HTTP POST isteği gönderir.
+---
 
-Method: POST
+## Webhook Bildirimi
 
-Content-Type: application/json
+Bir video işleme görevi başarıyla tamamlandığında, servis ortam değişkenlerinde tanımlanan `WEBHOOK_URL`'ye bir HTTP POST isteği gönderir.
 
-Webhook Body İçeriği:
+- **Method:** `POST`
+- **Content-Type:** `application/json`
 
-JSON
+**Webhook Body İçeriği:**
 
+```json
 {
-"video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+  "video_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
 }
+```
+
 Bu bildirim, işlemin tamamlandığını ve videonun artık indirilebilir veya silinebilir durumda olduğunu belirtir.
