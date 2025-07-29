@@ -9,10 +9,11 @@ import (
 
 type Request struct {
 	VideoID string `json:"video_id"`
+	File    *multipart.FileHeader
 }
 
-func (r *Request) GetVideoForm(c *gin.Context) (file *multipart.FileHeader, err error) {
-	file, err = c.FormFile("video")
+func (r *Request) GetVideoForm(c *gin.Context) (err error) {
+	r.File, err = c.FormFile("video")
 	if err != nil {
 		err = errors.New("file not provided")
 		return
@@ -20,7 +21,7 @@ func (r *Request) GetVideoForm(c *gin.Context) (file *multipart.FileHeader, err 
 
 	r.VideoID, _ = c.GetPostForm("video_id")
 
-	return file, r.validate()
+	return r.validate()
 }
 
 func (r *Request) GetForm(c *gin.Context) (err error) {

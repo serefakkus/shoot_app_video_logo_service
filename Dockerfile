@@ -27,7 +27,8 @@ WORKDIR /app
 
 COPY --from=builder /server /app/server
 
-COPY logo.png /app/logo.png
+COPY assets/logo_circular.png /app/assets/logo_circular.png
+COPY assets/circular_bg.png /app/assets/circular_bg.png
 
 # *** ORTAM DEĞİŞKENİNİ (ENVIRONMENT VARIABLE) AYARLA
 ENV WEBHOOK_URL="localhost/weebhook"

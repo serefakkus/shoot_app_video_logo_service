@@ -17,7 +17,7 @@ var (
 func HandleVideoUpload(c *gin.Context) {
 	request := &models.Request{}
 	// responsedan gelen video dosyasını al
-	file, err := request.GetVideoForm(c)
+	err := request.GetVideoForm(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -28,11 +28,11 @@ func HandleVideoUpload(c *gin.Context) {
 	processingVideos[request.VideoID] = true
 	videoMutex.RUnlock()
 
-	originalFilePath := filepath.Join(configs.TempPath, request.VideoID+"_"+file.Filename)
+	originalFilePath := filepath.Join(configs.TempPath, request.VideoID+"_"+request.File.Filename)
 	outputFilePath := filepath.Join(configs.OutputPath, request.VideoID+".mp4")
 
 	// Videoyu geçici olarak kaydet
-	if err := c.SaveUploadedFile(file, originalFilePath); err != nil {
+	if err := c.SaveUploadedFile(request.File, originalFilePath); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save video"})
 		return
 	}
